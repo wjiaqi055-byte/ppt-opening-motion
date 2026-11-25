@@ -4,6 +4,8 @@
 
 封面 12 秒分层开场：黑场 → 满版底图淡入并缓慢推近 → 巨型**照片填充大字**从画外横穿画面 → 中文标题擦写 → 细线擦出 → 正文逐条上浮 → 玻璃面片旋转掠过。内页：底图慢推、标题擦写、内容按阅读顺序错峰浮起、图片缩放、页脚最后进场；换页统一 fade 转场。
 
+另有一条更像短视频片头的路线（`scripts/oil_opening.py`）：**白边照片卡扇形炸开 → 圆环拼贴滑进中心再旋出 → 整屏 12 条竖切片从中心向两侧铺满 → 毛玻璃面板从左擦入 → 文字 3.3 秒后进场**。素材（切片 / 面板 / 卡片 / 圆环）全部从封面那张满版图自动切出来，换一张图就换一套气质。
+
 > 做不到的部分说清楚：WPS 没有 PowerPoint 365 的 Morph（平滑）和 3D 立方转场，所以换页只能淡入，也没有真三维空间里的翻飞面片（用平面玻璃三角 + 旋转 + 位移做出同类的视觉动作）。
 
 ## 效果一览
@@ -69,6 +71,18 @@ $S='<本仓库>\scripts'
 
 拼贴里同一页出现不同透明度 / 位移 / 旋转 = 动画真的在播；张张一样 = timing 没写进去。
 
+### 油画切片开场（一条命令）
+
+```powershell
+$OPEN="$S\oil_opening.py"
+
+& $PY "$OPEN" --deck 静态.pptx --out 开场版.pptx --dry-run     # 看方案
+& $PY "$OPEN" --deck 静态.pptx --out 开场版.pptx               # 生成
+& $PY "$OPEN" --deck 静态.pptx --out 开场版.pptx --art 我的油画.jpg --drop "shard0,bemyself"
+```
+
+默认拿封面最大的满版底图当油画；`--bars 12 --cards 8 --panel 0.655 --text-start 3300` 可调，`--no-cards/--no-ring/--no-panel` 可去掉某一拍。四拍时间轴、几何比例与踩过的坑见 `references/oil-sliced-opening.md`。
+
 ### 做封面那张"照片填充大字"
 
 ```powershell
@@ -127,10 +141,12 @@ ppt-opening-motion/
 ├── assets/motion.json           默认时间轴
 ├── references/
 │   ├── cover-storyboard.md      开场分镜与参数含义
+│   ├── oil-sliced-opening.md    油画切片四拍开场（素材、几何、WPS 坑）
 │   ├── wps-timing-xml.md        timing XML 结构与坑
 │   └── visual-system.md         深色雪山版式的色板与字阶口径
 └── scripts/
     ├── apply_motion.py
+    ├── oil_opening.py           油画切片开场（素材生成 + 动画注入）
     ├── make_photo_text.py
     └── verify_playback.py
 ```

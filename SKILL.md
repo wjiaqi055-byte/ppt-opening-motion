@@ -1,6 +1,6 @@
 ---
 name: ppt-opening-motion
-description: 给静态 PPT 加"视频级"原生开场动效（WPS/PPT 里真播，不用生成视频）。用于用户说"PPT 加动画""做个高级开场""封面要有动态""像抖音那种 PPT 动效""PPT 开头太死板""给答辩 PPT 加动效"。核心是封面 12 秒分层开场：背景淡入推近 → 巨型照片填充字横穿画面 → 标题擦写 → 正文逐条上浮 → 人像滑入 → 玻璃面片旋转掠过；另含全册条带式动画、逐页 fade 转场。不负责从零做版面，也不做 Morph 平滑切换与 3D 立方转场（WPS 不支持）。
+description: 给静态 PPT 加"视频级"原生开场动效（WPS/PPT 里真播，不用生成视频）。用于用户说"PPT 加动画""做个高级开场""封面要有动态""像抖音那种 PPT 动效""PPT 开头太死板""给答辩 PPT 加动效"，或要求"照这个视频的开头做""油画/切片/玻璃面板开场""照片卡扇形炸开、圆环、整屏竖切片铺开"。两条路线：A) 封面 12 秒分层开场（背景推近 → 照片填充字横穿 → 标题擦写 → 正文上浮 → 人像滑入 → 面片掠过）；B) 油画切片四拍开场（`oil_opening.py`，卡片扇开 → 圆环 → 12 条竖切片向两侧铺满 → 毛玻璃面板擦入）。另含全册条带式动画、逐页 fade 转场。不负责从零做版面，也不做 Morph 平滑切换与 3D 立方转场（WPS 不支持）。
 license: MIT
 ---
 
@@ -38,6 +38,35 @@ $S='<本 skill 目录>\scripts'
 `verify_playback.py` 会自动找 WPS；找不到（比如只装了 PowerPoint）就用 `--wpp <wpp.exe>` 指定，或改用 PowerPoint 手动放映看一遍。
 
 需要逐帧看细节时：`--goto 3` 直接跳页采样，`--next 1` 翻一页再采。
+
+## 路线 B：油画切片开场（短视频同款四拍）
+
+用户给了一段参考视频说"就照这个开头做"时用这条，比路线 A 更像短视频片头：
+
+```powershell
+$OPEN='<本 skill 目录>\scripts\oil_opening.py'
+
+# 1) 先看方案（油画来源、切片数、面板占比、时间轴）
+& $PY "$OPEN" --deck 静态.pptx --out 开场版.pptx --dry-run
+
+# 2) 生成（默认拿封面最大的满版底图当油画，自己算切片/面板/卡片/圆环素材）
+& $PY "$OPEN" --deck 静态.pptx --out 开场版.pptx
+
+# 3) 想换图 / 想先删掉抢镜的装饰
+& $PY "$OPEN" --deck 静态.pptx --out 开场版.pptx --art 我的油画.jpg --drop "shard0,bemyself"
+```
+
+四拍：**白边照片卡扇形张开 → 圆环拼贴滑进中心再旋出 → 整屏 12 条竖切片从中心向两侧铺满 → 毛玻璃面板从左擦入 → 原文字层 3.3s 后进场**。底图 1.25s 才淡入，所以开头一秒是纯黑，跟参考视频同节奏。
+
+常用开关：`--bars 9`（切片太密）、`--cards 6`、`--panel 0.55`（面板太宽）、`--text-start 3800`（文字再晚点）、`--no-cards` / `--no-ring` / `--no-panel`（去掉某一拍）。
+
+三条必须先记住的结论（都是 WPS 实测踩出来的）：
+
+- **设计位 = 成品位，动画只做位移**：WPS 会让"延迟进场"的图片提前显示，进场效果藏不住；所以卡片/圆环停在画外、切片摆终位，靠 `M 0 0 L dx dy` / `M dx dy L 0 0` 进出。
+- **图片上别用 `animScale`（会停在起始百分比）和 `exit fade`（不消失）**，要"长大"就分条位移展开，要"消失"就位移回画外。
+- **切片一律 `dy=0`**：带纵向分量的 `animMotion` 在图片上偶尔不生效。
+
+z 序：切片插在满版底图之后（盖图不盖字）→ 面板 → 卡片/圆环置顶。细节、几何比例与返工清单见 `references/oil-sliced-opening.md`。
 
 ## 环境要求
 
@@ -103,6 +132,7 @@ $S='<本 skill 目录>\scripts'
 ## 配套脚本
 
 - `scripts/apply_motion.py`：核心，静态 pptx → 动效 pptx。`--cover-only` 只加封面，`--skip-cover` 只加内页，`--dry-run` 看方案。
+- `scripts/oil_opening.py`：油画切片四拍开场（卡片扇开 → 圆环 → 竖切片铺满 → 毛玻璃面板）。素材自动生成，`--art` 换油画，`--drop` 删抢镜形状，`--bars/--cards/--panel/--text-start` 调参。
 - `scripts/make_photo_text.py`：把文字做成"照片填充 + 透明底" PNG（`background-clip:text` + Chrome headless），这是封面巨型字的关键素材。示例：
   `--text "BE MYSELF" --fill 雪山.jpg --size 240 --spacing 8 --out word.png`
 - `scripts/verify_playback.py`：WPS 放映 + 定时截屏拼贴验收（`--goto N` 跳页，`--next N` 翻页）。
