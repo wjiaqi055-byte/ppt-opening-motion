@@ -27,7 +27,24 @@ except ImportError as exc:  # pragma: no cover
     print(f"缺少依赖：{exc}（需要 pywin32 与 Pillow）", file=sys.stderr)
     raise SystemExit(2)
 
-DEFAULT_WPP = r"C:\Users\30246\AppData\Local\Kingsoft\WPS Office\12.1.0.29690\office6\wpp.exe"
+DEFAULT_WPP = None  # 由 find_wpp() 自动定位；也可 --wpp 指定
+
+
+def find_wpp() -> str | None:
+    """在常见安装位置找 wpp.exe（个人版 / 专业版 / 32 位）。"""
+    import glob
+    import os
+
+    patterns = [
+        r"C:\Users\*\AppData\Local\Kingsoft\WPS Office\*\office6\wpp.exe",
+        r"C:\Program Files\Kingsoft\WPS Office\*\office6\wpp.exe",
+        r"C:\Program Files (x86)\Kingsoft\WPS Office\*\office6\wpp.exe",
+        r"C:\Program Files\WPS Office\*\office6\wpp.exe",
+    ]
+    hits: list[str] = []
+    for pat in patterns:
+        hits += glob.glob(os.path.expandvars(pat))
+    return max(hits, key=lambda p: os.path.getmtime(p)) if hits else None
 
 VK = {"F5": 0x74, "RIGHT": 0x27, "LEFT": 0x25, "ESC": 0x1B, "ENTER": 0x0D}
 
@@ -62,7 +79,7 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--pptx", required=True)
     ap.add_argument("--out", required=True, help="拼贴图输出路径 jpg")
-    ap.add_argument("--wpp", default=DEFAULT_WPP)
+    ap.add_argument("--wpp", default=None, help="wpp.exe 路径；默认自动查找")
     ap.add_argument("--frames", type=int, default=14)
     ap.add_argument("--interval", type=float, default=0.25)
     ap.add_argument("--lead", type=float, default=0.6, help="进入放映后的等待秒数")
@@ -75,11 +92,12 @@ def main(argv: list[str] | None = None) -> int:
     if not pptx.exists():
         print(f"文件不存在：{pptx}", file=sys.stderr)
         return 2
-    if not Path(args.wpp).exists():
-        print(f"找不到 WPS：{args.wpp}（用 --wpp 指定 wpp.exe）", file=sys.stderr)
+    wpp = args.wpp or find_wpp()
+    if not wpp or not Path(wpp).exists():
+        print("找不到 WPS，用 --wpp 指定 wpp.exe（或手动放映检查）", file=sys.stderr)
         return 2
 
-    proc = subprocess.Popen([args.wpp, str(pptx)])
+    proc = subprocess.Popen([wpp, str(pptx)])
     hwnd = find_window(pptx.stem)
     if not hwnd:
         print("没等到 WPS 窗口", file=sys.stderr)

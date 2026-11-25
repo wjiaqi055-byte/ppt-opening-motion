@@ -19,7 +19,8 @@ license: MIT
 ## 四步跑完
 
 ```powershell
-$PY='C:\Users\30246\ppt-master\.venv\Scripts\python.exe'
+# 先用装了 python-pptx 的 Python（哪个都行，见下方"环境要求"）
+$PY='<python.exe>'
 $S='<本 skill 目录>\scripts'
 
 # 1) 先看分层方案（不改文件，只打印每层被判成什么）
@@ -29,13 +30,21 @@ $S='<本 skill 目录>\scripts'
 & $PY "$S\apply_motion.py" --deck 静态.pptx --out 动效.pptx
 
 # 3) 验证真的在播（WPS 前台放映 + 抽样截图拼贴）
-& 'C:\Users\30246\AppData\Local\Programs\Python\Python311\python.exe' `
-    "$S\verify_playback.py" --pptx 动效.pptx --frames 16 --interval 0.25 --out 封面抽查.jpg
+& $PY "$S\verify_playback.py" --pptx 动效.pptx --frames 16 --interval 0.25 --out 封面抽查.jpg
 
 # 4) 看拼贴图：同一页出现不同透明度/位移/旋转 = 动画生效；张张一样 = timing 没写进去
 ```
 
+`verify_playback.py` 会自动找 WPS；找不到（比如只装了 PowerPoint）就用 `--wpp <wpp.exe>` 指定，或改用 PowerPoint 手动放映看一遍。
+
 需要逐帧看细节时：`--goto 3` 直接跳页采样，`--next 1` 翻一页再采。
+
+## 环境要求
+
+- Windows + WPS（PowerPoint 也能播，但 WPS 的坑更多，脚本按 WPS 调的）。
+- Python 3.9+，`pip install -r requirements.txt`（python-pptx、lxml、Pillow、pywin32）。
+- `make_photo_text.py` 需要本机装有 Chrome；想用的字体要在系统里存在（`--font` 传字体名）。
+- 脚本本身不含任何绝对路径，换机器只需确认 python 与 WPS 位置。
 
 ## 分层的判定规则
 
