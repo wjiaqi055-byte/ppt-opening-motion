@@ -13,24 +13,38 @@ from __future__ import annotations
 
 import argparse
 import html
+import os
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
 CHROME_CANDIDATES = [
+    # Windows
     r"C:\Program Files\Google\Chrome\Application\chrome.exe",
     r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+    # macOS
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    # Linux
+    "/usr/bin/google-chrome",
+    "/usr/bin/google-chrome-stable",
+    "/usr/bin/chromium",
+    "/usr/bin/chromium-browser",
 ]
+
+ENV_CHROME = "CHROME_PATH"
 
 
 def find_chrome(explicit: str | None) -> str:
     if explicit:
         return explicit
+    env = os.environ.get(ENV_CHROME)
+    if env and Path(env).exists():
+        return env
     for c in CHROME_CANDIDATES:
         if Path(c).exists():
             return c
-    raise SystemExit("找不到 Chrome，用 --chrome 指定 chrome.exe")
+    raise SystemExit(f"找不到 Chrome，用 --chrome 指定 chrome.exe，或设环境变量 {ENV_CHROME}")
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -65,6 +65,20 @@ $S='<本 skill 目录>\scripts'
 
 内页（第 2 页起）：满版底图淡入+慢推、字号 ≥ 26pt 的标题擦写、图片缩放、其余按纵向位置错峰上浮、页脚最后 0.6s 淡入。
 
+## 浅色模板（没有满版底图）
+
+`--dry-run` 会直接告诉你封面缺 `bg` / `word` / `photo`。缺这几层时**不要用默认 12 秒时间轴**，否则前 2.5 秒是一张空页。改用收紧版：
+
+```json
+{"bg_color": null,
+ "cover": {"shard_delay": 600, "shard_dur": 1400, "shard_dx": 0.08,
+           "title_delay": 1150, "title_dur": 650, "title2_delay": 1800,
+           "rule_delay": 2000, "row_start": 2200, "row_stagger": 110, "row_dur": 700},
+ "page": {"row_stagger": 70}}
+```
+
+要点：`bg_color: null` 必须给（浅色页面被改成深底会整页发黑）；装饰面提前到 0.3 秒先动，标题 1.1 秒擦出，整页 4 秒内建完。想让开场真正像参考视频，还是得先让版式带上满版底图、照片填充大字和人像——这个 Skill 不替你补素材。
+
 ## 时间轴默认值（`--params` 可覆盖）
 
 封面：`bg_fade 900` → `sweep_delay 1300 / sweep_dur 4200 / sweep_dx -2.45` → `title_delay 2600` → `title2_delay 3450` → `rule_delay 3760` → `row_start 3960 / row_stagger 150` → `photo_delay 4520 / photo_slide_dx 0.55` → `shard_delay 4000 / shard_stagger 90`。

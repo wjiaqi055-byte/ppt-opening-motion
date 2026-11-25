@@ -241,10 +241,16 @@ def _max_pt(shape) -> float:
 
 
 def _text(shape) -> str:
+    """文本框文字；组合形状递归取子形状文字（SVG 导出的文字常被包进 <g>）。"""
     try:
         return shape.text_frame.text.strip()
     except Exception:
+        pass
+    try:
+        parts = [_text(s) for s in shape.shapes]
+    except Exception:
         return ""
+    return " / ".join(p for p in parts if p)
 
 
 def _box(shape, sw: int, sh: int):
@@ -291,14 +297,19 @@ def plan_cover(slide, sw: int, sh: int, cfg: dict) -> list[dict]:
         if shape.shape_id is None:
             continue
         x, y, w, h = _box(shape, sw, sh)
+        txt = _text(shape)
+        pt = _max_pt(shape)
+        if pt == 0 and txt:
+            # 字号没显式写入（继承自版式/主题）时，按框高估一个，保证仍能分出标题层级
+            pt = round((h * sh / 914400) * 72 * 0.78, 1)
         items.append(
             {
                 "spid": shape.shape_id,
                 "name": shape.name,
                 "x": x, "y": y, "w": w, "h": h,
                 "area": w * h,
-                "pt": _max_pt(shape),
-                "text": _text(shape),
+                "pt": pt,
+                "text": txt,
                 "pic": _is_picture(shape),
                 "free": _is_freeform(shape),
             }
@@ -324,13 +335,16 @@ def plan_cover(slide, sw: int, sh: int, cfg: dict) -> list[dict]:
         i for i in rest
         if not i["pic"] and i["pt"] == 0 and i["h"] < 0.04 and i["area"] < 0.2
     ]
+    rule_ids = {i["spid"] for i in rules}
     deco = [
         i for i in rest
-        if not i["pic"] and i["pt"] == 0 and 0.06 <= i["area"] < BG_AREA_RATIO
+        if not i["pic"] and i["pt"] == 0 and i["spid"] not in rule_ids
+        and 0.06 <= i["area"] < BG_AREA_RATIO
     ]
     shards = [
         i for i in rest
-        if not i["pic"] and i["pt"] == 0 and 0 < i["area"] < 0.06
+        if not i["pic"] and i["pt"] == 0 and i["spid"] not in rule_ids
+        and 0 < i["area"] < 0.06
     ]
 
     title = max(texts, key=lambda i: i["pt"], default=None)
@@ -376,18 +390,26 @@ def plan_cover(slide, sw: int, sh: int, cfg: dict) -> list[dict]:
 
 def shift_offstage(slide, plan: list[dict], cfg: dict, sw: int) -> None:
     """
-    WPS 会把"延迟进场"的图片提前显示（文本框不会）。所以把人像照先挪到画布外，
-    再由路径动画滑回原位——放映时看不到提前曝光，编辑视图里它在页面右侧外面。
+    WPS 会把"延迟进场"的图片提前显示（文本框不会）。所以把照片填充大字和人像
+    先挪到画布右侧外面，再由路径动画滑回原位——放映时看不到提前曝光，
+    编辑视图里它们在页面右侧外面。
+
+    大字按 sweep_dx 的量挪出去，正好让"横穿"从画外真正进入、最后停在设计位置；
+    人像按 photo_slide_dx 挪出去，滑回后同样落在设计位置。
     """
-    d = cfg["cover"].get("photo_slide_dx", 0)
-    if d <= 0:
+    word_dx = abs(cfg["cover"].get("sweep_dx", 0))
+    photo_dx = cfg["cover"].get("photo_slide_dx", 0)
+    if word_dx <= 0 and photo_dx <= 0:
         return
     by_id = {sp.shape_id: sp for sp in slide.shapes}
     for it in plan:
-        if it["kind"] in ("photo", "photo_frame"):
-            sp = by_id.get(it["spid"])
-            if sp is not None:
-                sp.left = int(sp.left + d * sw)
+        sp = by_id.get(it["spid"])
+        if sp is None:
+            continue
+        if it["kind"] == "word" and word_dx > 0:
+            sp.left = int(sp.left + word_dx * sw)
+        elif it["kind"] in ("photo", "photo_frame") and photo_dx > 0:
+            sp.left = int(sp.left + photo_dx * sw)
 
 
 def build_cover(plan: list[dict], cfg: dict, sh: int) -> list[str]:
@@ -572,9 +594,16 @@ def main(argv: list[str] | None = None) -> int:
     cover = prs.slides[0]
     cover_plan = plan_cover(cover, sw, sh, cfg) if not args.skip_cover else []
     if args.dry_run:
+        kinds = {it["kind"] for it in cover_plan}
         print(f"slide 1 分层（共 {len(cover_plan)} 层）：")
         for i, it in enumerate(cover_plan, 1):
             print(f"  {i:>2}. {it['kind']:<7} spid={it['spid']:<3} {it['label']}")
+        missing = [k for k in ("bg", "word", "photo") if k not in kinds]
+        if missing:
+            print(
+                f"  提示：封面缺少 {'/'.join(missing)} 层，12 秒开场只会退化为文字+装饰的时间轴；"
+                "想要“雪山推近 + 照片字横穿 + 人像滑入”，先让版式带上满版底图、照片填充大字与人像。"
+            )
         for idx, slide in enumerate(prs.slides, 1):
             if idx == 1:
                 continue
