@@ -1,0 +1,35 @@
+{
+  "_说明": "复制成 p.json 后用 --params p.json 传入；只写需要覆盖的键，其余走 default",
+  "cover": {
+    "bg_fade": 900,
+    "bg_zoom_dur": 14000,
+    "bg_zoom_to": 105,
+    "sweep_delay": 1300,
+    "sweep_dur": 4200,
+    "sweep_dx": -2.45,
+    "title_delay": 2600,
+    "title2_delay": 3450,
+    "rule_delay": 3760,
+    "row_start": 3960,
+    "row_stagger": 150,
+    "rise_px": 18,
+    "photo_delay": 4520,
+    "photo_slide_dx": 0.55,
+    "photo_scale_from": 96,
+    "shard_delay": 4000,
+    "shard_stagger": 90,
+    "shard_spin": 18,
+    "shard_dx": 0.22
+  },
+  "page": {
+    "bg_fade": 600,
+    "bg_zoom_dur": 14000,
+    "title_delay": 180,
+    "row_start": 360,
+    "row_stagger": 80,
+    "rise_px": 14,
+    "pic_delay": 560
+  },
+  "transition": "fade",
+  "bg_color": "06080C"
+}
